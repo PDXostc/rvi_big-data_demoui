@@ -1,0 +1,9 @@
+h1 {
+  text-decoration: underline;
+}
+
+#map { height: 360px; }
+
+.marker-img path {
+  fill: #000;
+}
