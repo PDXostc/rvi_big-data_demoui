@@ -1,3 +1,6 @@
+; Copyright 2015, ATS Advanced Telematic Systems GmbH
+; All Rights Reserved
+
 (ns rvi-demo.dev
   (:require [environ.core :refer [env]]
             [net.cgrand.enlive-html :refer [set-attr prepend append html]]
