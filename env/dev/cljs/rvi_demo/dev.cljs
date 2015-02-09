@@ -1,3 +1,6 @@
+; Copyright 2015, ATS Advanced Telematic Systems GmbH
+; All Rights Reserved
+
 (ns rvi-demo.dev
   (:require [rvi-demo.core :as core]
             [figwheel.client :as figwheel :include-macros true]
