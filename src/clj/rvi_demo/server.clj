@@ -1,3 +1,6 @@
+; Copyright 2015, ATS Advanced Telematic Systems GmbH
+; All Rights Reserved
+
 (ns rvi-demo.server
   (:require [clojure.java.io :as io]
             [rvi-demo.dev :refer [is-dev? browser-repl start-figwheel]]

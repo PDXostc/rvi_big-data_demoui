@@ -1,3 +1,6 @@
+; Copyright 2015, ATS Advanced Telematic Systems GmbH
+; All Rights Reserved
+
 (ns rvi-demo.dev
   (:require [environ.core :refer [env]]
             [cemerick.piggieback :as piggieback]

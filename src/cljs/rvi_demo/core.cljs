@@ -1,3 +1,6 @@
+; Copyright 2015, ATS Advanced Telematic Systems GmbH
+; All Rights Reserved
+
 (ns rvi-demo.core
 
   (:require [om.core :as om :include-macros true]
