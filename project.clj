@@ -7,21 +7,24 @@
   :source-paths ["src/clj" "src/cljs"]
 
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-2665"]
+                 [org.clojure/clojurescript "0.0-2850"]
                  [ring "1.3.1"]
                  [compojure "1.2.0"]
                  [enlive "1.1.5"]
-                 [om "0.7.3"]
-                 [racehub/om-bootstrap "0.3.5"]
-                 [riddley "0.1.7"]
+                 [org.omcljs/om "0.8.8"]
+                 [racehub/om-bootstrap "0.4.0"]
                  [cljs-wsock "0.4.0"]
-                 [figwheel "0.2.2-SNAPSHOT"]
+                 [riddley  "0.1.7"]
                  [environ "1.0.0"]
+                 [leiningen "2.5.0"]
+                 [figwheel "0.2.4-SNAPSHOT"]
+                 [secretary "1.2.1"]
+                 [cljsjs/d3 "3.5.3-0"]
+                 [cljs-ajax "0.3.9"]
                  [com.cemerick/piggieback "0.1.5"]
-                 [weasel "0.5.0"]
-                 [leiningen "2.5.0"]]
+                 [weasel "0.6.0-SNAPSHOT"]]
 
-  :plugins [[lein-cljsbuild "1.0.3"]
+  :plugins [[lein-cljsbuild "1.0.4"]
             [lein-environ "1.0.0"]
             [com.palletops/uberimage "0.4.1"]]
 
@@ -35,23 +38,23 @@
                              :compiler {:output-to     "resources/public/js/app.js"
                                         :output-dir    "resources/public/js/out"
                                         :source-map    "resources/public/js/out.js.map"
-                                        :preamble      ["react/react.min.js"]
-                                        :externs       ["react/externs/react.js"]
                                         :optimizations :none
+                                        :verbose true
                                         :pretty-print  true}}}}
-  :uberimage {:tag "advancedtelematic/rvi-demo:0.1.0"}
+  :uberimage {:tag "advancedtelematic/rvi-demo:0.3.2"}
 
   :profiles {:dev {:repl-options {:init-ns rvi-demo.server
                                   :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
-                   :plugins [[lein-figwheel "0.2.2-SNAPSHOT"]]
+                   :plugins [[lein-figwheel "0.2.4-SNAPSHOT"]]
 
                    :figwheel {:http-server-root "public"
                               :port 3449
                               :css-dirs ["resources/public/css"]}
 
                    :env {:is-dev true
-                         :traces-uri "ws://boot2docker:9000/ws"}
+                         :traces-uri "ws://boot2docker:9000/ws"
+                         :api-uri "http://boot2docker:9000/"}
 
                    :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]}}}}
 

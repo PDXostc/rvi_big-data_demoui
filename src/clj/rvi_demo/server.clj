@@ -12,13 +12,12 @@
 
 (defn- mk-config-js
   []
-  (str "var conf = { traces_uri: \"" (env :traces-uri) "\"}"))
+  (str "var conf = { traces_uri: \"" (env :traces-uri) "\", api_uri: \"" (env :api-uri) "\"}"))
 
 (def inject-html
   (comp
     (if is-dev? (set-attr :class "is-dev") identity)
     (prepend (html [:script {:type "text/javascript" :src "/js/out/goog/base.js"}]))
-    (prepend (html [:script {:type "text/javascript" :src "/react/react.js"}]))
     (prepend (html [:script {:type "text/javascript"} (mk-config-js)]))
     (append  (html [:script {:type "text/javascript"}
                     (str "goog.require('rvi_demo." (if is-dev? "dev" "prod") "')")]))))
@@ -28,7 +27,7 @@
 
 (defroutes routes
   (resources "/")
-  (resources "/react" {:root "react"})
+  #_(resources "/react" {:root "react"})
   (GET "/*" req (page)))
 
 (def http-handler

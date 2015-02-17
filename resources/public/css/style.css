@@ -7,3 +7,25 @@ h1 {
 .marker-img path {
   fill: #000;
 }
+
+#slider-svg {
+  width: 100%;
+}
+
+.axis text {
+  font: 9px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+}
+
+.brush .handle {
+  fill: #fff;
+  stroke: #000;
+  stroke-opacity: .5;
+  stroke-width: 1.25px;
+  cursor: crosshair;
+}
