@@ -27,7 +27,7 @@
                  [com.cemerick/piggieback "0.1.5"]
                  [weasel "0.6.0-SNAPSHOT"]]
 
-  :plugins [[lein-cljsbuild "1.0.4"]
+  :plugins [[lein-cljsbuild "1.0.5"]
             [lein-environ "1.0.0"]
             [com.palletops/uberimage "0.4.1"]]
 

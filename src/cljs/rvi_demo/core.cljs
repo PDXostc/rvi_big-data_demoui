@@ -29,7 +29,14 @@
       (set! "#/live")))
 
 (sec/defroute live-data "/live" []
-              (load-om "live" ld/grid ld/map-model))
+              (load-om "live" ld/grid {:map {:leaflet-map nil
+                                             :ws nil
+                                             :map {:lat 37.75122, :lng -122.39522}}
+                                       :markers {}
+                                       :traces {}
+                                       :osm {:url "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                             :attrib "Map data © OpenStreetMap contributors"}
+                                       :socket nil}))
 
 
 (sec/defroute fleet-position "/fleet" []
