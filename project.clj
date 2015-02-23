@@ -56,8 +56,8 @@
                               :css-dirs ["resources/public/css"]}
 
                    :env {:is-dev true
-                         :traces-uri "ws://boot2docker:9000/ws"
-                         :api-uri "http://boot2docker:9000/"}
+                         :traces-uri "ws://localhost:9000/ws"
+                         :api-uri "http://localhost:9000/"}
 
                    :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]}}}}
 

@@ -45,4 +45,4 @@
             :id "top"}
            (n/nav-item {:key 1 :href "#/live" :active? (= "live" page)} "Live")
            (n/nav-item {:key 2 :href "#/fleet" :active? (= "fleet" page)} "Fleet Position")
-           (n/nav-item {:key 3 :href "#/historical" :active? (= "historical" page)} "Historical Data"))))
+           (n/nav-item {:key 3 :href "#/pickups" :active? (= "pickups" page)} "Historical Data"))))

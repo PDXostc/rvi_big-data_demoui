@@ -9,7 +9,8 @@
             [secretary.core :as sec :include-macros true]
             [rvi-demo.nav :as n]
             [rvi-demo.live-data :as ld]
-            [rvi-demo.fleet :as fl]))
+            [rvi-demo.fleet :as fl]
+            [rvi-demo.pickups :as pick]))
 
 (sec/set-config! :prefix "#")
 
@@ -26,7 +27,7 @@
 (defn main []
   (-> js/document
       .-location
-      (set! "#/live")))
+      (set! "#/pickups")))
 
 (sec/defroute live-data "/live" []
               (load-om "live" ld/grid {:map {:leaflet-map nil
@@ -45,3 +46,13 @@
                                           :time-extent {:selected-date (js/Date. 2008 4 18)}
                                           :osm {:url "https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png"
                                                 :attrib "Map data © OpenStreetMap contributors"}}))
+
+(sec/defroute pickups-dropoffs "/pickups" []
+              (load-om "pickups" pick/pickups-dropoffs {:map {:leaflet-map nil
+                                                              :map {:lat 39.74739, :lng -105}}
+                                                        :positions []
+                                                        :hours [12 13]
+                                                        :date-range {:from [(js/Date. 2008 4 18)]
+                                                                     :to [(js/Date. 2008 4 19)]}
+                                                        :osm {:url "https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png"
+                                                              :attrib "Map data © OpenStreetMap contributors"}}))

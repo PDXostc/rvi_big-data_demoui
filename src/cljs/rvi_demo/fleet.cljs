@@ -9,9 +9,6 @@
             [cljsjs.d3]
             [cljs.core.async :refer [<! alts! chan put! sliding-buffer]]))
 
-(def state
-  (atom {:dateTime {:year 2007 :month 5 :day 18}}))
-
 (defn api-uri
   []
   (.-api_uri js/conf))
@@ -36,12 +33,8 @@
 
 (defn draw-map
   [cursor]
-  (let [lurl (get-in cursor [:osm :url])
-        lattr (get-in cursor [:osm :attrib])]
-    (-> js/L (.map "map")
-        (.setView #js [37.76084 -122.39522] 11)
-        #_(.addLayer (L.TileLayer. lurl #js {:minZoom 1 :maxZoom 19, :attribution lattr :id "examples.map-20v6611k"}))
-        #_(draw-pos (:positions cursor)))))
+  (-> js/L (.map "map")
+      (.setView #js [37.76084 -122.39522] 11)))
 
 (defcomponent fleet-position
   [cursor owner]
