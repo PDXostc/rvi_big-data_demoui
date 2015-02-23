@@ -198,7 +198,6 @@
     {:chans {:time-chan (chan (sliding-buffer 1))}})
 
   (render-state [_ {:keys [chans]}]
-    (prn (:date-range cursor))
     (dom/div
       (g/grid {}
               (g/row {}

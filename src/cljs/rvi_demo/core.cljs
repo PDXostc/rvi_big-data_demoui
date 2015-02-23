@@ -27,7 +27,7 @@
 (defn main []
   (-> js/document
       .-location
-      (set! "#/pickups")))
+      (set! "#/live")))
 
 (sec/defroute live-data "/live" []
               (load-om "live" ld/grid {:map {:leaflet-map nil
