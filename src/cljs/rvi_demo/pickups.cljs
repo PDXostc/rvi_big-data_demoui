@@ -6,6 +6,7 @@
             [ajax.core :refer (GET)]
             [om-bootstrap.grid :as g]
             [cljsjs.d3]
+            [rvi-demo.datepicker :as dp]
             [cljs.core.async :refer [<! alts! chan put! sliding-buffer]]))
 
 (defn api-uri
@@ -153,43 +154,6 @@
         x)
       (draw-brush (append svg "g" {:class "brush"}) cursor x (om/get-state owner [:time-chan])))))
 
-(defcomponent date-from
-  [cursor owner]
-  (render
-    [_]
-    (dom/div {:id "date-from" :class "input-group date" :style {:margin-top "13px"}}
-             (dom/input {:type "text" :class "form-control"}
-                        (dom/span {:class "input-group-addon"}
-                                  (dom/i {:class "glyphicon glyphicon-th"})))))
-
-  (did-mount
-    [_]
-    (doto (js/$ "#date-from")
-      (.datepicker  (clj->js {:format "dd/mm/yyyy"}))
-      (.datepicker "update" (get cursor 0))
-      (-> (.datepicker) (.on "changeDate" (fn [e]
-                                            (put! (om/get-state owner [:time-chan]) [:from-date (.-date e)])
-                                            (om/transact! cursor [0] #(.-date e))))))))
-
-(defcomponent date-to
-  [cursor owner]
-  (render-state
-    [_ _]
-    (dom/div {:id "date-to" :class "input-group date" :style {:margin-top "13px"}}
-             (dom/input {:type "text" :class "form-control"}
-                        (dom/span {:class "input-group-addon"}
-                                  (dom/i {:class "glyphicon glyphicon-th"})))))
-
-  (did-mount
-    [_]
-    (doto (js/$ "#date-to")
-      (.datepicker  (clj->js {:format "dd/mm/yyyy"}))
-      (.datepicker "update" (get cursor 0))
-      (-> (.datepicker) (.on "changeDate" (fn [e]
-                                            (do
-                                              (put! (om/get-state owner [:time-chan]) [:to-date (.-date e)])
-                                              (om/transact! cursor [0] #(.-date e)))))))))
-
 (defcomponent pickups-dropoffs
   [cursor owner]
 
@@ -203,8 +167,14 @@
               (g/row {}
                      (om/build positions-comp cursor))
               (g/row {}
-                     (g/col {:md 2} (om/build date-from (get-in cursor [:date-range :from]) {:init-state chans}))
-                     (g/col {:md 2} (om/build date-to (get-in cursor [:date-range :to]) {:init-state chans}))
+                     (g/col {:md 2} (om/build dp/datepicker (get-in cursor [:date-range :from]) {:init-state chans
+                                                                                              :opts {:id "date-from"
+                                                                                                     :on-change (fn [e]
+                                                                                                                  (put! (:time-chan chans) [:from-date (.-date e)]))}}))
+                     (g/col {:md 2} (om/build dp/datepicker (get-in cursor [:date-range :to]) {:init-state chans
+                                                                                              :opts {:id "date-to"
+                                                                                                     :on-change (fn [e]
+                                                                                                                  (put! (:time-chan chans) [:to-date (.-date e)]))}}))
                      (g/col {:md 8} (om/build hours (:hours cursor) {:init-state chans}))))))
   (will-mount
     [_]
