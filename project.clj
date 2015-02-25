@@ -25,7 +25,8 @@
                  [cljsjs/d3 "3.5.3-0"]
                  [cljs-ajax "0.3.9"]
                  [com.cemerick/piggieback "0.1.5"]
-                 [weasel "0.6.0-SNAPSHOT"]]
+                 [weasel "0.6.0-SNAPSHOT"]
+                 [com.andrewmcveigh/cljs-time "0.3.2"]]
 
   :plugins [[lein-cljsbuild "1.0.5"]
             [lein-environ "1.0.0"]

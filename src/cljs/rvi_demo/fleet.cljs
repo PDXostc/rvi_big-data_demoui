@@ -7,7 +7,10 @@
             [om-bootstrap.grid :as g]
             [om-bootstrap.button :as b]
             [cljsjs.d3]
-            [cljs.core.async :refer [<! alts! chan put! sliding-buffer]]))
+            [rvi-demo.datepicker :as dp]
+            [cljs.core.async :refer [<! alts! chan put! sliding-buffer]])
+  (:use [cljs-time.coerce :only (from-date to-long)]
+        [cljs-time.core :only (days plus)]))
 
 (defn api-uri
   []
@@ -64,16 +67,14 @@
         #_(.addLayer leaflet-map tile-layer)
         (draw-pos leaflet-map (:positions cursor))))))
 
-(defn js-time
-  [y m d]
-  (.getTime (js/Date. y m d)))
-
 (defn time-scale
-  []
-  (-> js/d3.time
+  [date-time]
+  (prn "scale date " date-time)
+  (let [date (js/Date. (.getFullYear date-time) (.getMonth date-time) (.getDate date-time))]
+    (-> js/d3.time
       (.scale)
-      (.domain (clj->js [(js-time 2008 4 18) (js-time 2008 4 19)]))
-      (.range #js [0 800])))
+      (.domain (clj->js [(.getTime date) (to-long (plus (from-date date) (days 1)))]))
+      (.range #js [0 800]))))
 
 
 (defn select [selector]
@@ -97,10 +98,11 @@
   (-> parent (append "g" {:class "brush" :transform "translate(20, 0)"})))
 
 (defn mk-brush
-  [scale]
+  [scale date-time]
+  (prn (str "Brush date time " date-time " pos " (scale (.getTime date-time))))
   (-> js/d3.svg (.brush)
       (.x scale)
-      (.extent #js [0 0])))
+      (.extent #js [0 (scale (.getTime date-time))])))
 
 (defn format-date
   [date]
@@ -118,7 +120,7 @@
                          (.attr handle "cx" pos)
                          (.text text (format-date time))))
         brushend-handler (fn [] (let [[_ time] (pos-time brush scale)]
-                                 (put! time-chan time)))]
+                                  (put! time-chan time)))]
     (-> brush (.on "brush" brush-handler) (.on "brushend" brushend-handler))))
 
 (defn axis-g
@@ -131,8 +133,8 @@
       (.ticks js/d3.time.hour 2)))
 
 (defn draw-slider
-  [dst time-chan]
-  (let [time (time-scale)
+  [dst date time-chan]
+  (let [time (time-scale date)
         axis (mk-axis time)
         svg (slider-svg dst)
         ag (axis-g svg)
@@ -140,9 +142,9 @@
         handle (-> bg (append "circle" {:class "handle" :transform "translate(0, 20)" :r 7}))
         text (-> (append svg "text" {:transform "translate(40, 60)"})
                  (.style "text-anchor", "middle")
-                 (.text (format-date (js/Date. 2008 5 18))))
-        brush (-> (mk-brush time) (attach-listeners handle time time-chan text))]
-
+                 (.text (format-date date)))
+        brush (-> (mk-brush time date) (attach-listeners handle time time-chan text))]
+    (.attr handle "cx" (time date))
     (-> bg (.selectAll ".extent,.resize") (.remove))
     (axis ag)
     (brush bg)
@@ -156,26 +158,12 @@
 
   (did-mount [_]
     (let [c (om/get-state owner [:time-chan])]
-      (draw-slider (select "#slider") c))))
+      (draw-slider (select "#slider") (get cursor 0) c)))
 
-(defcomponent date-input
-  [cursor _]
-  (render
-    [_]
-    (dom/div {:id "date-input" :class "input-group date" :style {:margin-top "13px"}}
-      (dom/input {:type "text" :class "form-control"}
-               (dom/span {:class "input-group-addon"}
-                         (dom/i {:class "glyphicon glyphicon-th"})))))
-
-  (did-mount
-    [_]
-    (doto (js/$ "#date-input")
-      (.datepicker  (clj->js {:format "dd/mm/yyyy"}))
-      (.datepicker "update" (:selected-date cursor))))
-
-  (did-update
-    [_ _ _]
-    (.datepicker (js/$ "#date-input") "update" (js/Date. 2008 4 18))))
+  (did-update [_ _ _]
+    (-> (select "#slider") (.select "svg") (.remove))
+    (let [c (om/get-state owner [:time-chan])]
+      (draw-slider (select "#slider") (get cursor 0) c))))
 
 (defcomponent time-picker
   [cursor _]
@@ -185,6 +173,7 @@
 
 (defcomponent fleet
   [cursor owner]
+
   (init-state
     [_]
     {:chans {:time-chan (chan (sliding-buffer 1))
@@ -196,17 +185,22 @@
         (g/row {}
                (om/build fleet-position cursor))
         (g/row {}
-               (g/col {:md 2} (om/build date-input (:time-extent cursor)))
-               (g/col {:md 9} (om/build time-picker cursor {:init-state chans}))
+               (g/col {:md 2}
+                      (om/build dp/datepicker
+                                (get-in cursor [:time-extent :selected-date])
+                                {:opts {:id "datepick"
+                                        :on-change (fn [e]
+                                                     (prn (.-date e)))}}))
+               (g/col {:md 9} (om/build slider (get-in cursor [:time-extent :selected-date]) {:init-state chans}))
                (g/col {:md 1 :style {:height "75px"}})))))
 
   (will-mount
     [_]
-    (get-positions (js/Date. 2008 4 18) cursor)
+    #_(get-positions (js/Date. 2008 4 18) cursor)
     (go-loop []
              (let [ctime (om/get-state owner [:chans :time-chan])
                    creload (om/get-state owner [:chans :reload-chan])
                    event (-> (alts! [ctime creload]) (nth 0))]
-               (.log js/console event)
+               (om/update! cursor [:time-extent :selected-date] [event])
                (get-positions event cursor)
                (recur)))))

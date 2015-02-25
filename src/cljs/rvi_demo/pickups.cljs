@@ -167,14 +167,12 @@
               (g/row {}
                      (om/build positions-comp cursor))
               (g/row {}
-                     (g/col {:md 2} (om/build dp/datepicker (get-in cursor [:date-range :from]) {:init-state chans
-                                                                                              :opts {:id "date-from"
-                                                                                                     :on-change (fn [e]
-                                                                                                                  (put! (:time-chan chans) [:from-date (.-date e)]))}}))
-                     (g/col {:md 2} (om/build dp/datepicker (get-in cursor [:date-range :to]) {:init-state chans
-                                                                                              :opts {:id "date-to"
-                                                                                                     :on-change (fn [e]
-                                                                                                                  (put! (:time-chan chans) [:to-date (.-date e)]))}}))
+                     (g/col {:md 2} (om/build dp/datepicker (get-in cursor [:date-range :from]) {:opts {:id "date-from"
+                                                                                                        :on-change (fn [e]
+                                                                                                                     (put! (:time-chan chans) [:from-date (.-date e)]))}}))
+                     (g/col {:md 2} (om/build dp/datepicker (get-in cursor [:date-range :to]) {:opts {:id "date-to"
+                                                                                                      :on-change (fn [e]
+                                                                                                                   (put! (:time-chan chans) [:to-date (.-date e)]))}}))
                      (g/col {:md 8} (om/build hours (:hours cursor) {:init-state chans}))))))
   (will-mount
     [_]

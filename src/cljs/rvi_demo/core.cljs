@@ -27,7 +27,7 @@
 (defn main []
   (-> js/document
       .-location
-      (set! "#/live")))
+      (set! "#/fleet")))
 
 (sec/defroute live-data "/live" []
               (load-om "live" ld/grid {:map {:leaflet-map nil
@@ -43,7 +43,7 @@
 (sec/defroute fleet-position "/fleet" []
               (load-om "fleet" fl/fleet  {:map {:leaflet-map nil
                                                 :map {:lat 39.74739, :lng -105}}
-                                          :time-extent {:selected-date (js/Date. 2008 4 18)}
+                                          :time-extent {:selected-date [(js/Date. 2008 4 20)]}
                                           :osm {:url "https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png"
                                                 :attrib "Map data © OpenStreetMap contributors"}}))
 
