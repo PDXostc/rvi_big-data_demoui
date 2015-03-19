@@ -13,6 +13,7 @@
             [ring.adapter.jetty :refer [run-jetty]])
   (:gen-class))
 
+
 (defn- mk-config-js
   []
   (str "var conf = { traces_uri: \"" (env :traces-uri) "\", api_uri: \"" (env :api-uri) "\"}"))

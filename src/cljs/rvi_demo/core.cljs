@@ -27,18 +27,19 @@
 (defn main []
   (-> js/document
       .-location
-      (set! "#/fleet")))
+      (set! "#/live")))
 
 (sec/defroute live-data "/live" []
-              (load-om "live" ld/grid {:map {:leaflet-map nil
-                                             :ws nil
-                                             :map {:lat 37.75122, :lng -122.39522}}
-                                       :markers {}
-                                       :traces {}
-                                       :osm {:url "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                             :attrib "Map data © OpenStreetMap contributors"}
-                                       :socket nil}))
-
+              (load-om "live" ld/live-data {:map     {:leaflet-map nil
+                                                      :ws          nil
+                                                      :map         {:lat 37.75122, :lng -122.39522}}
+                                            :markers {}
+                                            :traces  {}
+                                            :filter  {:speed {:range [0 250]
+                                                              :value [0 250]}}
+                                            :osm     {:url    "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                                      :attrib "Map data © OpenStreetMap contributors"}
+                                            :socket  nil}))
 
 (sec/defroute fleet-position "/fleet" []
               (load-om "fleet" fl/fleet  {:map {:leaflet-map nil

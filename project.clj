@@ -26,7 +26,8 @@
                  [cljs-ajax "0.3.9"]
                  [com.cemerick/piggieback "0.1.5"]
                  [weasel "0.6.0-SNAPSHOT"]
-                 [com.andrewmcveigh/cljs-time "0.3.2"]]
+                 [com.andrewmcveigh/cljs-time "0.3.2"]
+                 [com.cognitect/transit-cljs "0.8.205"]]
 
   :plugins [[lein-cljsbuild "1.0.5"]
             [lein-environ "1.0.0"]
