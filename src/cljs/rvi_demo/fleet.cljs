@@ -17,8 +17,11 @@
   (.-api_uri js/conf))
 
 (defn get-positions
-  [date cursor]
-  (GET (str (api-uri) "fleet/position?time=" (.getTime date)) {:handler #(om/update! cursor [:positions] %)}))
+  [date area cursor]
+  (GET (str (api-uri) "fleet/position")
+       {:params  {:time (.getTime date)
+                  :area area}
+        :handler #(om/update! cursor [:positions] %)}))
 
 (defn mk-marker
   [data lat-lng]
@@ -39,44 +42,6 @@
   (-> js/L (.map "map")
       (.setView #js [37.76084 -122.39522] 11)))
 
-(defcomponent fleet-position
-  [cursor owner]
-
-  (init-state
-    [_]
-    {:leaflet-map nil :tile-layer nil})
-
-  (render-state [_ _]
-    (dom/div #js {:id "map"} nil))
-
-  (did-mount
-    [_]
-    (let [m (draw-map cursor)
-          lurl (get-in cursor [:osm :url])
-          lattr (get-in cursor [:osm :attrib])
-          t (L.TileLayer. lurl #js {:minZoom 1 :maxZoom 19, :attribution lattr :id "examples.map-20v6611k"})]
-      (.addLayer m t)
-      (draw-pos m (:positions cursor))
-      (om/set-state! owner {:leaflet-map m :tile-layer t})))
-
-  (did-update [_ _ {:keys [leaflet-map tile-layer]}]
-    (if leaflet-map
-      (do
-        (.eachLayer leaflet-map (fn [layer] (if (not= layer tile-layer)
-                                              (.removeLayer leaflet-map layer))))
-        #_(.addLayer leaflet-map tile-layer)
-        (draw-pos leaflet-map (:positions cursor))))))
-
-(defn time-scale
-  [date-time]
-  (prn "scale date " date-time)
-  (let [date (js/Date. (.getFullYear date-time) (.getMonth date-time) (.getDate date-time))]
-    (-> js/d3.time
-      (.scale)
-      (.domain (clj->js [(.getTime date) (to-long (plus (from-date date) (days 1)))]))
-      (.range #js [0 800]))))
-
-
 (defn select [selector]
   (-> js/d3 (.select selector)))
 
@@ -86,6 +51,56 @@
     (fn [acc [n v]] (.attr acc (clj->js n) (clj->js v)))
     (-> sel (.append nm) )
     (seq attributes)))
+
+(defcomponent fleet-position
+  [cursor owner]
+
+  (init-state
+    [_]
+    {:leaflet-map nil :tile-layer nil})
+
+  (render-state [_ _]
+    (dom/div {:id "map"}))
+
+  (did-mount
+    [_]
+    (let [m (draw-map cursor)
+          lurl (get-in cursor [:osm :url])
+          lattr (get-in cursor [:osm :attrib])
+          t (L.TileLayer. lurl #js {:minZoom 1 :maxZoom 19, :attribution lattr :id "examples.map-20v6611k"})
+          filter-layer (js/L.FeatureGroup.)]
+      (.addLayer m t)
+      (draw-pos m (:positions cursor))
+      (.addLayer m filter-layer)
+      (.addControl m (js/L.Control.Draw. (clj->js {:edit {:featureGroup filter-layer}})))
+      (.on m "draw:created" (fn [e]
+                              (let [date (get-in @cursor [:time-extent :selected-date 0])
+                                    area (map (fn [lat-lng] [(.-lat lat-lng) (.-lng lat-lng)]) (-> e (.-layer) (.getLatLngs)))]
+                                (om/update! cursor [:area] (vec area))
+                                (get-positions date area cursor))
+                              (.addLayer filter-layer (.-layer e))))
+      (om/set-state! owner {:leaflet-map m :tile-layer t :filter-layer filter-layer})))
+
+  (did-update [_ _ {:keys [leaflet-map tile-layer filter-layer]}]
+    (if leaflet-map
+      (do
+        (.eachLayer leaflet-map (fn [layer] (if (and
+                                                  (not (contains? #{tile-layer filter-layer} layer))
+                                                  (not (.hasLayer filter-layer layer)))
+                                              (.removeLayer leaflet-map layer))))
+        #_(.addLayer leaflet-map tile-layer)
+        (draw-pos leaflet-map (:positions cursor))))))
+
+(defn time-scale
+  [date-time]
+  (prn "scale date " date-time)
+  (let [date (js/Date. (.getFullYear date-time) (.getMonth date-time) (.getDate date-time))]
+    (-> js/d3.time
+        (.scale)
+      (.domain (clj->js [(.getTime date) (to-long (plus (from-date date) (days 1)))]))
+      (.range #js [0 800]))))
+
+
 
 (defn slider-svg
   [selection]
@@ -176,31 +191,31 @@
 
   (init-state
     [_]
-    {:chans {:time-chan (chan (sliding-buffer 1))
+    {:chans {:time-chan   (chan (sliding-buffer 1))
              :reload-chan (chan (sliding-buffer 1))}})
 
   (render-state [_ {:keys [chans]}]
     (dom/div
       (g/grid {}
-        (g/row {}
-               (om/build fleet-position cursor))
-        (g/row {}
-               (g/col {:md 2}
-                      (om/build dp/datepicker
-                                (get-in cursor [:time-extent :selected-date])
-                                {:opts {:id "datepick"
-                                        :on-change (fn [e]
-                                                     (prn (.-date e)))}}))
-               (g/col {:md 9} (om/build slider (get-in cursor [:time-extent :selected-date]) {:init-state chans}))
-               (g/col {:md 1 :style {:height "75px"}})))))
+              (g/row {}
+                     (om/build fleet-position cursor))
+              (g/row {}
+                     (g/col {:md 2}
+                            (om/build dp/datepicker
+                                      (get-in cursor [:time-extent :selected-date])
+                                      {:opts {:id        "datepick"
+                                              :on-change (fn [e]
+                                                           (prn (.-date e)))}}))
+                     (g/col {:md 9} (om/build slider (get-in cursor [:time-extent :selected-date]) {:init-state chans}))
+                     (g/col {:md 1 :style {:height "75px"}})))))
 
   (will-mount
     [_]
-    #_(get-positions (js/Date. 2008 4 18) cursor)
     (go-loop []
              (let [ctime (om/get-state owner [:chans :time-chan])
                    creload (om/get-state owner [:chans :reload-chan])
-                   event (-> (alts! [ctime creload]) (nth 0))]
+                   event (-> (alts! [ctime creload]) (nth 0))
+                   area (get-in @cursor [:area])]
                (om/update! cursor [:time-extent :selected-date] [event])
-               (get-positions event cursor)
+               (get-positions event area cursor)
                (recur)))))
