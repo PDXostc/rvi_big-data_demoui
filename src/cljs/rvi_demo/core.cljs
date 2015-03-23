@@ -27,7 +27,7 @@
 (defn main []
   (-> js/document
       .-location
-      (set! "#/fleet")))
+      (set! "#/live")))
 
 (sec/defroute live-data "/live" []
               (load-om "live" ld/live-data {:map     {:leaflet-map nil
@@ -42,19 +42,12 @@
                                             :socket  nil}))
 
 (sec/defroute fleet-position "/fleet" []
-              (load-om "fleet" fl/fleet {:map         {:leaflet-map nil
-                                                       :map         {:lat 39.74739, :lng -105}}
-                                         :time-extent {:selected-date [(js/Date. 2008 4 20)]}
-                                         :area        []
-                                         :osm         {:url    "https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png"
-                                                       :attrib "Map data © OpenStreetMap contributors"}}))
+              (load-om "fleet" fl/fleet {:time-extent {:selected-date [(js/Date. 2008 4 20)]}
+                                         :area        []}))
 
 (sec/defroute pickups-dropoffs "/pickups" []
-              (load-om "pickups" pick/pickups-dropoffs {:map        {:leaflet-map nil
-                                                                     :map         {:lat 39.74739, :lng -105}}
-                                                        :positions  []
+              (load-om "pickups" pick/pickups-dropoffs {:positions  []
                                                         :hours      [12 13]
                                                         :date-range {:from [(js/Date. 2008 4 18)]
                                                                      :to   [(js/Date. 2008 4 19)]}
-                                                        :osm        {:url    "https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png"
-                                                                     :attrib "Map data © OpenStreetMap contributors"}}))
+                                                        :area       []}))

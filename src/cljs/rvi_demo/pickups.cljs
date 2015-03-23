@@ -7,6 +7,7 @@
             [om-bootstrap.grid :as g]
             [cljsjs.d3]
             [rvi-demo.datepicker :as dp]
+            [rvi-demo.map :as map]
             [cljs.core.async :refer [<! alts! chan put! sliding-buffer]]))
 
 (defn api-uri
@@ -14,52 +15,41 @@
   (.-api_uri js/conf))
 
 (defn get-positions
-  [[dateFrom dateTo] [hourFrom hourTo] cursor]
+  [[dateFrom dateTo] [hourFrom hourTo] area cursor]
   (GET (str (api-uri) "pickups")
-       {:params {:dateFrom dateFrom
-                 :dateTo dateTo
-                 :hourFrom hourFrom
-                 :hourTo hourTo}
+       {:params  {:dateFrom dateFrom
+                  :dateTo   dateTo
+                  :hourFrom hourFrom
+                  :hourTo   hourTo
+                  :area     area}
         :handler (fn [points] (om/update! cursor [:positions] points))}))
 
 (defn draw-pos
   [map data]
   (-> js/L (.heatLayer (clj->js data) #js {:radius 10 :max 1}) (.addTo map)))
 
-(defn draw-map
-  [cursor]
-  (-> js/L (.map "map")
-      (.setView #js [37.76084 -122.39522] 13)))
-
-
-(defcomponent positions-comp
-  [cursor owner]
+(defcomponent map-comp
+  [cursor owner {:keys [area]}]
+  (:mixins map/leaflet-map)
 
   (init-state
     [_]
-    {:leaflet-map nil :tile-layer nil})
-
-  (render-state
-    [_ _]
-    (dom/div #js {:id "map"} nil))
+    {:area area})
 
   (did-mount
     [_]
-    (let [m (draw-map cursor)
-          lurl (get-in cursor [:osm :url])
-          lattr (get-in cursor [:osm :attrib])
-          t (L.TileLayer. lurl #js {:minZoom 1 :maxZoom 19, :attribution lattr :id "examples.map-20v6611k"})]
-      (.addLayer m t)
-      (draw-pos m (:positions cursor))
-      (om/update-state! owner #(merge % {:leaflet-map m :tile-layer t}))))
+    (-> (.mk-map owner "map" []) (draw-pos (:positions cursor))))
 
   (did-update
-    [_ _ {:keys [leaflet-map tile-layer]}]
-    (if leaflet-map
-      (do
-        (.eachLayer leaflet-map (fn [layer] (if (not= layer tile-layer)
-                                              (.removeLayer leaflet-map layer))))
-        (draw-pos leaflet-map (:positions cursor))))))
+    [_ _ _]
+    (do
+      (.reset-layers! owner)
+      (draw-pos (. owner -leaflet) (:positions cursor))
+      (.bringToFront (. owner -filter-layer))))
+
+  (render
+    [_ ]
+    (dom/div {:id "map"})))
 
 (defn select [selector]
   (-> js/d3 (.select selector)))
@@ -159,13 +149,14 @@
 
   (init-state
     [_]
-    {:chans {:time-chan (chan (sliding-buffer 1))}})
+    {:chans {:time-chan (chan (sliding-buffer 1))
+             :area      (chan 1 (map (fn [polygon] [:area (map/polygon->coord-vec polygon)])))}})
 
   (render-state [_ {:keys [chans]}]
     (dom/div
       (g/grid {}
               (g/row {}
-                     (om/build positions-comp cursor))
+                     (->map-comp cursor {:opts chans}))
               (g/row {}
                      (g/col {:md 2} (om/build dp/datepicker (get-in cursor [:date-range :from]) {:opts {:id "date-from"
                                                                                                         :on-change (fn [e]
@@ -176,12 +167,27 @@
                      (g/col {:md 8} (om/build hours (:hours cursor) {:init-state chans}))))))
   (will-mount
     [_]
-    #_(get-positions [] cursor)
     (go-loop []
              (let [ctime (om/get-state owner [:chans :time-chan])
-                   event (<! ctime)]
+                   carea (om/get-state owner [:chans :area])
+                   [event _] (alts! [ctime carea])]
                (case (event 0)
-                 :hours (get-positions (map #(.getTime (get % 0)) [(get-in @cursor [:date-range :from]) (get-in @cursor [:date-range :to])]) (event 1) cursor)
-                 :to-date (get-positions (map #(.getTime %) [(get-in @cursor [:date-range :from 0]) (event 1)]) (:hours @cursor) cursor)
-                 :from-date (get-positions (map #(.getTime %) [(event 1) (get-in @cursor [:date-range :to 0])]) (:hours @cursor) cursor)))
-               (recur))))
+                 :hours (get-positions (map #(.getTime (get % 0)) [(get-in @cursor [:date-range :from]) (get-in @cursor [:date-range :to])])
+                                       (event 1)
+                                       (get-in @cursor [:area])
+                                       cursor)
+                 :to-date (get-positions (map #(.getTime %) [(get-in @cursor [:date-range :from 0]) (event 1)])
+                                         (:hours @cursor)
+                                         (get-in @cursor [:area])
+                                         cursor)
+                 :from-date (get-positions (map #(.getTime %) [(event 1) (get-in @cursor [:date-range :to 0])])
+                                           (:hours @cursor)
+                                           (get-in @cursor [:area])
+                                           cursor)
+                 :area (do
+                         (om/update! cursor [:area] (event 1))
+                         (get-positions (map #(.getTime (get % 0)) [(get-in @cursor [:date-range :from]) (get-in @cursor [:date-range :to])])
+                                        (:hours @cursor)
+                                        (event 1)
+                                        cursor))))
+             (recur))))

@@ -20,16 +20,17 @@
                  [riddley  "0.1.7"]
                  [environ "1.0.0"]
                  [leiningen "2.5.0"]
-                 [figwheel "0.2.4-SNAPSHOT"]
+                 [figwheel "0.2.5"]
                  [secretary "1.2.1"]
-                 [cljsjs/d3 "3.5.3-0"]
+                 [cljsjs/d3 "3.5.5-2"]
                  [cljs-ajax "0.3.9"]
                  [com.cemerick/piggieback "0.1.5"]
                  [weasel "0.6.0-SNAPSHOT"]
                  [com.andrewmcveigh/cljs-time "0.3.2"]
-                 [com.cognitect/transit-cljs "0.8.205"]]
+                 [com.cognitect/transit-cljs "0.8.205"]
+                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]]
 
-  :plugins [[lein-cljsbuild "1.0.5"]
+  :plugins [[lein-cljsbuild "1.0.4"]
             [lein-environ "1.0.0"]
             [com.palletops/uberimage "0.4.1"]]
 
@@ -51,7 +52,7 @@
   :profiles {:dev {:repl-options {:init-ns rvi-demo.server
                                   :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
 
-                   :plugins [[lein-figwheel "0.2.4-SNAPSHOT"]]
+                   :plugins [[lein-figwheel "0.2.5"]]
 
                    :figwheel {:http-server-root "public"
                               :port 3449

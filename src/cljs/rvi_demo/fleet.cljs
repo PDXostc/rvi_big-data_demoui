@@ -3,11 +3,13 @@
   (:require [om.core :as om]
             [om-tools.dom :as dom :include-macros true]
             [om-tools.core :refer-macros [defcomponent]]
+            [om-tools.mixin :refer-macros [defmixin]]
             [ajax.core :refer (GET)]
             [om-bootstrap.grid :as g]
             [om-bootstrap.button :as b]
             [cljsjs.d3]
             [rvi-demo.datepicker :as dp]
+            [rvi-demo.map :as map]
             [cljs.core.async :refer [<! alts! chan put! sliding-buffer]])
   (:use [cljs-time.coerce :only (from-date to-long)]
         [cljs-time.core :only (days plus)]))
@@ -34,13 +36,9 @@
                                        :fillOpacity 0.8}))))
 
 (defn draw-pos
-  [map data]
-  (-> js/L (.geoJson (clj->js data) #js {:pointToLayer mk-marker}) (.addTo map)))
-
-(defn draw-map
-  [cursor]
-  (-> js/L (.map "map")
-      (.setView #js [37.76084 -122.39522] 11)))
+  [m data]
+  (prn (str m))
+  (-> js/L (.geoJson (clj->js data) #js {:pointToLayer mk-marker}) (.addTo m)))
 
 (defn select [selector]
   (-> js/d3 (.select selector)))
@@ -53,43 +51,26 @@
     (seq attributes)))
 
 (defcomponent fleet-position
-  [cursor owner]
+  [cursor owner {:keys [area] :as opts}]
+  (:mixins map/leaflet-map)
 
   (init-state
     [_]
-    {:leaflet-map nil :tile-layer nil})
-
-  (render-state [_ _]
-    (dom/div {:id "map"}))
+    {:area area})
 
   (did-mount
     [_]
-    (let [m (draw-map cursor)
-          lurl (get-in cursor [:osm :url])
-          lattr (get-in cursor [:osm :attrib])
-          t (L.TileLayer. lurl #js {:minZoom 1 :maxZoom 19, :attribution lattr :id "examples.map-20v6611k"})
-          filter-layer (js/L.FeatureGroup.)]
-      (.addLayer m t)
-      (draw-pos m (:positions cursor))
-      (.addLayer m filter-layer)
-      (.addControl m (js/L.Control.Draw. (clj->js {:edit {:featureGroup filter-layer}})))
-      (.on m "draw:created" (fn [e]
-                              (let [date (get-in @cursor [:time-extent :selected-date 0])
-                                    area (map (fn [lat-lng] [(.-lat lat-lng) (.-lng lat-lng)]) (-> e (.-layer) (.getLatLngs)))]
-                                (om/update! cursor [:area] (vec area))
-                                (get-positions date area cursor))
-                              (.addLayer filter-layer (.-layer e))))
-      (om/set-state! owner {:leaflet-map m :tile-layer t :filter-layer filter-layer})))
+    (-> (.mk-map owner "map" []) (draw-pos (:positions cursor))))
 
-  (did-update [_ _ {:keys [leaflet-map tile-layer filter-layer]}]
-    (if leaflet-map
-      (do
-        (.eachLayer leaflet-map (fn [layer] (if (and
-                                                  (not (contains? #{tile-layer filter-layer} layer))
-                                                  (not (.hasLayer filter-layer layer)))
-                                              (.removeLayer leaflet-map layer))))
-        #_(.addLayer leaflet-map tile-layer)
-        (draw-pos leaflet-map (:positions cursor))))))
+  (did-update
+    [_ _ _]
+    (do
+      (.reset-layers! owner)
+      (draw-pos (. owner -leaflet) (:positions cursor))))
+
+  (render
+    [_]
+    (dom/div {:id "map"})))
 
 (defn time-scale
   [date-time]
@@ -192,20 +173,21 @@
   (init-state
     [_]
     {:chans {:time-chan   (chan (sliding-buffer 1))
-             :reload-chan (chan (sliding-buffer 1))}})
+             :reload-chan (chan (sliding-buffer 1))
+             :area        (chan (sliding-buffer 1) (map map/polygon->coord-vec))}})
 
   (render-state [_ {:keys [chans]}]
     (dom/div
       (g/grid {}
               (g/row {}
-                     (om/build fleet-position cursor))
+                     (->fleet-position cursor {:opts chans}))
               (g/row {}
                      (g/col {:md 2}
                             (om/build dp/datepicker
                                       (get-in cursor [:time-extent :selected-date])
                                       {:opts {:id        "datepick"
                                               :on-change (fn [e]
-                                                           (prn (.-date e)))}}))
+                                                           (prn (str "Date changed " (.-date e))))}}))
                      (g/col {:md 9} (om/build slider (get-in cursor [:time-extent :selected-date]) {:init-state chans}))
                      (g/col {:md 1 :style {:height "75px"}})))))
 
@@ -214,8 +196,13 @@
     (go-loop []
              (let [ctime (om/get-state owner [:chans :time-chan])
                    creload (om/get-state owner [:chans :reload-chan])
-                   event (-> (alts! [ctime creload]) (nth 0))
-                   area (get-in @cursor [:area])]
-               (om/update! cursor [:time-extent :selected-date] [event])
-               (get-positions event area cursor)
+                   carea (om/get-state owner [:chans :area])
+                   [event chnl] (alts! [ctime creload carea])]
+               (condp = chnl
+                 ctime (do
+                         (om/update! cursor [:time-extent :selected-date] [event])
+                         (get-positions event (get-in @cursor [:area]) cursor))
+                 carea (do
+                         (om/update! cursor [:area] event)
+                         (get-positions (get-in @cursor [:time-extent :selected-date 0]) event cursor)))
                (recur)))))

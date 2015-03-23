@@ -12,16 +12,9 @@
             [cljs.core.async :refer [<! alts! chan put! sliding-buffer]]
             [cognitect.transit :as t]
             [secretary.core :as sec :include-macros true]
+            [rvi-demo.map :as map]
             [rvi-demo.nav :as n]))
 
-
-(defn mk-map
-  [cursor]
-  (let [lurl (get-in cursor [:osm :url])
-        lattr (get-in cursor [:osm :attrib])]
-    (-> js/L (.map "map")
-        (.setView #js [37.76084 -122.39522] 11)
-        (.addLayer (L.TileLayer. lurl #js {:minZoom 1 :maxZoom 19, :attribution lattr})))))
 
 (defn marker-icon
   [occupied?]
@@ -53,16 +46,21 @@
   (.-traces_uri js/conf))
 
 (defcomponent map-component
-  [cursor _]
+  [cursor owner {:keys [area]}]
+  (:mixins map/leaflet-map)
+
+  (init-state
+    [_]
+    {:area area})
+
+  (did-mount
+    [_]
+    (let [markers (.layerGroup js/L)
+          m (.mk-map owner "map" [markers])]
+      (om/update! cursor [:map :leaflet-map] markers)))
 
   (render [_]
     (dom/div #js {:id "map"} nil))
-
-  (did-mount [_]
-    (.log js/console "Mounted")
-    (let [leaflet (mk-map cursor)
-          markers (-> js/L (.layerGroup) (.addTo leaflet))]
-      (om/update! cursor [:map :leaflet-map] markers)))
 
   (should-update
     [_ _ _]
@@ -183,6 +181,19 @@
 
 (def js-writer (t/writer :json-verbose))
 
+(defn- filter-traces
+  [cursor f]
+  (let [traces (get-in @cursor [:traces])
+        expired (->> traces (filter f) (map first))]
+    (if (seq expired)
+      (om/transact! cursor (fn [c]
+                             (let [m (get-in c [:map :leaflet-map])]
+                               (doall
+                                 (map #(.removeLayer m (second %)) (select-keys (:markers c) expired)))
+                               (-> c
+                                   (update-in [:traces] (fn [t] (apply dissoc t expired)))
+                                   (update-in [:markers] (fn [t] (apply dissoc t expired))))) )))))
+
 (defcomponent live-data
   [cursor owner]
 
@@ -190,14 +201,15 @@
     [_]
     {:chans {:speed-channel (chan (sliding-buffer 1))
              :gps-data      (ws/open! (ws-uri))
-             :timer         (chan (sliding-buffer 1))}})
+             :timer         (chan (sliding-buffer 1))
+             :area          (chan (sliding-buffer 1))}})
 
   (will-mount
     [_]
-    (let [{:keys [speed-channel gps-data timer]} (om/get-state owner :chans)]
+    (let [{:keys [speed-channel gps-data timer area]} (om/get-state owner :chans)]
       (js/setInterval #(put! timer (.getTime (js/Date.))) 5000)
       (go-loop []
-               (let [[value port] (alts! [speed-channel gps-data timer])]
+               (let [[value port] (alts! [speed-channel gps-data timer area])]
                  (condp = port
                    gps-data (let [[status event] value]
                               (case status
@@ -216,18 +228,13 @@
                                    (.clearLayers (get-in @cursor [:map :leaflet-map]))
                                    (recur))
                    timer (do
-                           (let [traces (get-in @cursor [:traces])
-                                 expired (->> traces (filter #(< 15000 (- value (:timestamp (second %)))))
-                                              (map first))]
-                             (if (seq expired)
-                               (om/transact! cursor (fn [c]
-                                                      (let [m (get-in c [:map :leaflet-map])]
-                                                        (doall
-                                                          (map #(.removeLayer m (second %)) (select-keys (:markers c) expired)))
-                                                        (-> c
-                                                          (update-in [:traces] (fn [t] (apply dissoc t expired)))
-                                                          (update-in [:markers] (fn [t] (apply dissoc t expired))))) ))))
-                           (recur)))))))
+                           (filter-traces cursor #(< 15000 (- value (:timestamp (second %)))))
+                           (recur))
+                   area (do
+                          (filter-traces cursor (fn [trace]
+                                                  (not (-> value (.getBounds) (.contains (->> trace (second) (clj->js) (.latLng js/L)))))))
+                          (ws/send gps-data (t/write js-writer (apply array (map #(zipmap ["lat" "lng"] %) (-> value (map/polygon->coord-vec) )))))
+                          (recur)))))))
 
   (will-unmount
     [_]
@@ -239,10 +246,9 @@
       (g/grid {}
               (g/row {}
                      (g/col {:md 9 }
-                            (p/panel {:header "Map"} (om/build map-component cursor)))
+                            (p/panel {:header "Map"} (->map-component cursor {:opts chans})))
                      (g/col {:md 3 }
                             (p/panel {:header "Summary"} (om/build stats-component (:traces cursor)))))
               (g/row {}
                      (g/col {}
-                            (om/build speed-filter cursor {:init-state chans}))))))
-  )
+                            (om/build speed-filter cursor {:init-state chans})))))))
