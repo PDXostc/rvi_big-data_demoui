@@ -47,7 +47,7 @@
                                         :optimizations :none
                                         :verbose true
                                         :pretty-print  true}}}}
-  :uberimage {:tag "advancedtelematic/rvi_demo_ui:0.4.0"}
+  :uberimage {:tag "advancedtelematic/rvi_demo_ui:0.5.3"}
 
   :profiles {:dev {:repl-options {:init-ns rvi-demo.server
                                   :nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}
