@@ -3,15 +3,6 @@ Upstream-Name: RVI Big Data Demo UI
 Source: git@gitlab.advancedtelematic.com:rvi_big_data/rvi-demo-ui.git
 
 Files: *
-Copyright: Copyright 2015, ATS Advanced Telematic Systems GmbH
-License: Proprietary
- This software is the private property of ATS Advanced Telematic 
- Systems GmbH, and should be treated as confidential. This software
- is not for redistribution except as explicitly permitted by an
- authorized representative of ATS Advanced Telematic Systems GmbH.
- .
- This program is distributed WITHOUT ANY WARRANTY; without even 
- the implied warranty of MERCHANTABILITY or FITNESS FOR A 
- PARTICULAR PURPOSE.
- .
+Copyright: Copyright (C) 2015, Jaguar Land Rover
+License: MPL-2.0
 
